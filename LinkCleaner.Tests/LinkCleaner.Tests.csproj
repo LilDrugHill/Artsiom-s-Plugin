@@ -1,0 +1,46 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0-windows</TargetFramework>
+		<LangVersion>latest</LangVersion>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<Platforms>AnyCPU;x64</Platforms>
+		<Configurations>Debug;Release;Tries</Configurations>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)' == 'Tries'">
+		<StartupObject>LinkCleaner.Tests.Program</StartupObject>
+		<DefineConstants>TRIES</DefineConstants>
+	</PropertyGroup>
+
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+		<PackageReference Include="MSTest" Version="3.6.4" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\LinkCleaner\LinkCleaner.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Reference Include="RevitAPI">
+	    <HintPath>C:\Program Files\Autodesk\Revit 2025\RevitAPI.dll</HintPath>
+	    <Private>False</Private>
+	  </Reference>
+	  <Reference Include="RevitAPIUI">
+	    <HintPath>C:\Program Files\Autodesk\Revit 2025\RevitAPIUI.dll</HintPath>
+	    <Private>False</Private>
+	  </Reference>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="TestDir\" />
+	</ItemGroup>
+
+</Project>
