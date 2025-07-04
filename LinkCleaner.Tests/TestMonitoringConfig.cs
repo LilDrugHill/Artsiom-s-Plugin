@@ -1,5 +1,7 @@
 ﻿using LinkCleaner.Storage.Services;
 using System.Reflection;
+using System.Xml;
+using System.Xml.Serialization;
 
 namespace LinkCleaner.Tests
 {
@@ -15,7 +17,7 @@ namespace LinkCleaner.Tests
             // Ensure the directory exists
             MonitoringConfig.PrepareConfigFile(confDir: pathDir, confFile: pathFile);
             Assert.IsTrue(File.Exists(pathFile));
-            File.Delete(pathFile);
+            //File.Delete(pathFile);
         }
 
         [TestMethod]
@@ -28,6 +30,20 @@ namespace LinkCleaner.Tests
             Assert.IsTrue(Directory.Exists(pathDir), "Dir does not creates");
             Assert.IsTrue(File.Exists(pathFile), "File does not creates");
             Directory.Delete(pathDir, true); // Delete the directory after the test
+        }
+
+        public void TestConfigValidation()
+        {
+            string pathDir = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), @"..\..\..\..\TestDir"));
+            string pathBadFile = Path.Combine(pathDir, "BadMonitoringConfig.xml");
+            string pathGoodFile = Path.Combine(pathDir, "GoodMonitoringConfig.xml");
+
+
+            XmlDocument goodDoc = new();
+            XmlNode root = goodDoc.CreateElement()
+
+
+            (for )
         }
     }
 }
