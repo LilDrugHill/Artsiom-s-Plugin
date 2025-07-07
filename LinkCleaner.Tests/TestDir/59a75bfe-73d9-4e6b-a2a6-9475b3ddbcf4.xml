@@ -1,0 +1,6 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<Project Name="TestProject" Guid="59a75bfe-73d9-4e6b-a2a6-9475b3ddbcf4" Status="Enable">
+	<Link Name="TestLink1" Guid="59a75bfe-73d9-4e6b-a2a6-9475b3ddbcf4"/>
+	<Link Name="TestLink2" Guid="59a75bfe-73d9-4e6b-a2a6-9475b3ddbcf4"/>
+	<Link Name="TestLink3" Guid="59a75bfe-73d9-4e6b-a2a6-9475b3ddbcf4"/>
+</Project>

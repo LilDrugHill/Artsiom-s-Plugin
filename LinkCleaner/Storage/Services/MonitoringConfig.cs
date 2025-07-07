@@ -25,7 +25,7 @@ namespace LinkCleaner.Storage.Services
             ConfigDirPath = confDir ?? IConfigurationStorage.PathToConfigurationDirectory;
             ConfigFilePath = Path.Combine(ConfigDirPath, $"{projectGuid.ToString()}.xml");
 
-            DeserializeConfig();
+            DeserializeConfig(projectGuid);
         }
 
 
@@ -171,16 +171,21 @@ namespace LinkCleaner.Storage.Services
             }
         }
 
-        public DocumentModelInWPF? DeserializeConfig(Guid projGuid)
+        public DocumentModelInWPF? DeserializeConfig(Guid projectGuid)
         {
+            string? projectName = null;
+            bool status = false;
+            List<LinkModelInWPF>? linkList = new();
+
+
             PrepareConfigFile();
             if (ConfigurationDocument.DocumentElement is XmlNode confProjRoot && confProjRoot?.Attributes is not null)
             {
+                if (confProjRoot.Attributes.GetNamedItem(IConfigurationStorage.DocGuidField) is not XmlNode attr || attr.Value != projectGuid.ToString()) throw new Exception("***");
                 // Нужно динамически проверять имя перед отображением
-                string projectName = confProjRoot.Attributes.GetNamedItem(IConfigurationStorage.DocNameField).Value;
-                Guid projectGuid = new Guid(confProjRoot.Attributes.GetNamedItem(IConfigurationStorage.DocGuidField).Value);
-                bool status = confProjRoot.Attributes.GetNamedItem(IConfigurationStorage.DocStatusField).Value == "Enable";
-                List<LinkModelInWPF> linkList = new();
+                projectName = confProjRoot.Attributes.GetNamedItem(IConfigurationStorage.DocNameField)?.Value;
+                status = confProjRoot.Attributes.GetNamedItem(IConfigurationStorage.DocStatusField)?.Value == "Enable";
+                
                 if (ConfigurationDocument.DocumentElement.HasChildNodes)
                 {
                     foreach (XmlNode linkNode in ConfigurationDocument.DocumentElement.ChildNodes)
@@ -190,16 +195,14 @@ namespace LinkCleaner.Storage.Services
                                                         true)); // True тк нахождение в конфиге являет отслеживание
                     }
                 }
-                Document = new DocumentModelInWPF(projectName, projectGuid, status) { LinksInDocument = linkList };
             }
+            Document = new DocumentModelInWPF(projectName, projectGuid, status) { LinksInDocument = linkList };
             return Document;
         }
-        public void SerializeConfig(string confFile)
+        public void SerializeConfig()
         {
 
             PrepareConfigFile();
-
-
             XmlElement projectElement = ConfigurationDocument.DocumentElement;
             projectElement.SetAttribute(IConfigurationStorage.DocNameField, Document.Name);
             projectElement.SetAttribute(IConfigurationStorage.DocGuidField, Document.Guid.ToString());
@@ -217,7 +220,7 @@ namespace LinkCleaner.Storage.Services
                     }
                 }
             }
-            ConfigurationDocument.Save(confFile);
+            ConfigurationDocument.Save(ConfigFilePath);
             return;
         }
     }
