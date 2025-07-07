@@ -1,0 +1,6 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<Data>
+	<Projct Name="TestProject" Guid="WOSJA-12345-KLQWE-21903-ALWMD" Status="Enable">
+		<Link Name="TestLink" Guid="WOSJA-12345-KLQWE-21903-ALWMD"/>
+	</Projct>
+</Data>
