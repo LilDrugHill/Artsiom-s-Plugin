@@ -1,42 +1,28 @@
-﻿using System.Xml;
+﻿using System.Collections.Generic;
 using System.IO;
+using System.Xml;
 using System.Xml.Linq;
-using System.Collections.Generic;
-
 using LinkCleaner.Presentation.Emuns;
 using LinkCleaner.Presentation.Models;
-using LinkCleaner.Storage.Constants;
+using LinkCleaner.Storage.Interfaces;
+
 
 namespace LinkCleaner.Storage.Services
 {
-    public class MonitoringConfig
+    public class MonitoringConfig : IConfigurationStorage
     {
-        //public string Name => "Add Link";
-        //public string IconName => "link_cleaner_icon.png";
-        //public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
-        //{
-        //    UIDocument uiDoc = commandData.Application.ActiveUIDocument;
-        //    Document doc = uiDoc.Document;
-
-        //    RevitLinkType[] links = App.GetLinks(doc);
-
-        //    if (links.Length == 0)
-        //    {
-        //        TaskDialog.Show("Info", "No links found in the document.");
-        //        return Result.Failed;
-        //    }
         XmlDocument ConfigurationDocument;
         
         public string ConfigFilePath { get; init; }
         public string ConfigDirPath { get; init; }
 
-        DocumentModelInWPF _document;
+        DocumentModelInWPF? _document;
 
-        public DocumentModelInWPF Document { get => _document; init => _document = value; }
+        public DocumentModelInWPF? Document { get => _document; private set => _document = value; }
 
         public MonitoringConfig(Guid projectGuid, string? confDir = null)
         {
-            ConfigDirPath = confDir ?? ConfigConstants.PathToConfigurationDirectory;
+            ConfigDirPath = confDir ?? IConfigurationStorage.PathToConfigurationDirectory;
             ConfigFilePath = Path.Combine(ConfigDirPath, $"{projectGuid.ToString()}.xml");
 
             DeserializeConfig();
@@ -97,7 +83,7 @@ namespace LinkCleaner.Storage.Services
 
         void CreateConfFile(string path)
         {
-            var doc = new XDocument(new XDeclaration("1.0", "utf-8", "yes"), new XElement("Data"));
+            var doc = new XDocument(new XDeclaration("1.0", "utf-8", "yes"), new XElement(IConfigurationStorage.RootName));
             doc.Save(path);
         }
 
@@ -126,40 +112,26 @@ namespace LinkCleaner.Storage.Services
                 {
                     xmlDoc.Load(confFile);
                     XmlNode root = xmlDoc.DocumentElement;
-                    if (root is XmlElement xmlRoot && xmlRoot.Name == ConfigConstants.RootName)
+                    if (root is XmlElement xmlRoot && xmlRoot.Name == IConfigurationStorage.RootName
+                        && xmlRoot.Attributes.GetNamedItem(IConfigurationStorage.DocNameField)?.Value is not null
+                        && xmlRoot.Attributes.GetNamedItem(IConfigurationStorage.DocGuidField)?.Value is not null
+                        && xmlRoot.Attributes.GetNamedItem(IConfigurationStorage.DocStatusField)?.Value is not null)
                     {
                         if (xmlRoot.HasChildNodes)
                         {
-                            foreach (XmlNode projectNode in xmlRoot.ChildNodes)
+                            foreach (XmlNode linkNode in xmlRoot.ChildNodes)
                             {
-                                if (projectNode.Name == ConfigConstants.ProjectNodeName
-                                    && projectNode.Attributes.GetNamedItem(ConfigConstants.DocNameField)?.Value is not null
-                                    && projectNode.Attributes.GetNamedItem(ConfigConstants.DocGuidField)?.Value is not null
-                                    && projectNode.Attributes.GetNamedItem(ConfigConstants.DocStatusField)?.Value is not null)
+                                if (linkNode.Name == IConfigurationStorage.LinkNodeName
+                                    && linkNode.Attributes.GetNamedItem(IConfigurationStorage.LinkNameField)?.Value is not null
+                                    && linkNode.Attributes.GetNamedItem(IConfigurationStorage.LinkGuidField)?.Value is not null)
                                 {
-                                    if (projectNode.HasChildNodes)
-                                    {
-                                        foreach (XmlNode linkNode in projectNode.ChildNodes)
-                                        {
-                                            if (linkNode.Name == ConfigConstants.LinkNodeName
-                                                && linkNode.Attributes.GetNamedItem(ConfigConstants.LinkNameField)?.Value is not null
-                                                && linkNode.Attributes.GetNamedItem(ConfigConstants.LinkGuidField)?.Value is not null)
-                                            {
-                                                return true;
-                                            }
-                                            xmlDoc = null;
-                                            return false;
-                                        }
-                                        return true;
-                                    }
                                     return true;
                                 }
                                 xmlDoc = null;
                                 return false;
                             }
-                            return true;
                         }
-                        return true; // Valid configuration file
+                        return true;
                     }
                     xmlDoc = null;
                     return false;
@@ -199,116 +171,54 @@ namespace LinkCleaner.Storage.Services
             }
         }
 
-        public List<DocumentModelInWPF> DeserializeConfig()
+        public DocumentModelInWPF? DeserializeConfig(Guid projGuid)
         {
             PrepareConfigFile();
-            if (ConfigurationDocument.DocumentElement.HasChildNodes && ConfigurationDocument.DocumentElement.ChildNodes is XmlNodeList Nodes)
+            if (ConfigurationDocument.DocumentElement is XmlNode confProjRoot && confProjRoot?.Attributes is not null)
             {
-                foreach (XmlNode project in Nodes)
+                // Нужно динамически проверять имя перед отображением
+                string projectName = confProjRoot.Attributes.GetNamedItem(IConfigurationStorage.DocNameField).Value;
+                Guid projectGuid = new Guid(confProjRoot.Attributes.GetNamedItem(IConfigurationStorage.DocGuidField).Value);
+                bool status = confProjRoot.Attributes.GetNamedItem(IConfigurationStorage.DocStatusField).Value == "Enable";
+                List<LinkModelInWPF> linkList = new();
+                if (ConfigurationDocument.DocumentElement.HasChildNodes)
                 {
-                    string projectName = project.Attributes.GetNamedItem(ConfigConstants.DocNameField).Value;
-                    Guid projectGuid = new Guid(project.Attributes.GetNamedItem(ConfigConstants.DocGuidField).Value);
-                    bool status = project.Attributes.GetNamedItem(ConfigConstants.DocStatusField).Value == "Enable";
-                    List<LinkModelInWPF> links = new();
-                    if (project.HasChildNodes)
+                    foreach (XmlNode linkNode in ConfigurationDocument.DocumentElement.ChildNodes)
                     {
-                        foreach (XmlNode linksInConfig in project.ChildNodes)
-                        {
-                            links.Add(new LinkModelInWPF(linksInConfig.Attributes.GetNamedItem(ConfigConstants.LinkNameField).Value,
-                                                            new Guid(linksInConfig.Attributes.GetNamedItem(ConfigConstants.LinkGuidField).Value),
-                                                            true));
-                        }
+                        linkList.Add(new LinkModelInWPF(linkNode.Attributes.GetNamedItem(IConfigurationStorage.LinkNameField).Value,
+                                                        new Guid(linkNode.Attributes.GetNamedItem(IConfigurationStorage.LinkGuidField).Value),
+                                                        true)); // True тк нахождение в конфиге являет отслеживание
                     }
-                    Document = new DocumentModelInWPF(projectName, projectGuid, status) { LinksInDocument = links };
                 }
+                Document = new DocumentModelInWPF(projectName, projectGuid, status) { LinksInDocument = linkList };
             }
-            return DocumentsList;
-
+            return Document;
         }
-
-        //static bool IsProjectInConfig(Guid projectGuid)
-        //{
-        //    return ConfigDict.ContainsKey(projectGuid);
-        //}
-
-        //static void AddProjectToConfig(Guid projectGuid)
-        //{
-        //    if (!ConfigDict.ContainsKey(projectGuid))
-        //    {
-        //        ConfigDict[projectGuid] = new List<Guid>();
-        //    }
-        //}
-
-        //static void AddLinkToConfig(Guid projectGuid, Guid linkGuid)
-        //{
-        //    if (!ConfigDict.ContainsKey(projectGuid))
-        //    {
-        //        ConfigDict[projectGuid] = new List<Guid>();
-        //    }
-        //    ConfigDict[projectGuid].Add(linkGuid);
-        //}
-
-        //static void RemoveLinkFromConfig(Guid projectGuid, Guid linkGuid)
-        //{
-        //    if (ConfigDict.ContainsKey(projectGuid))
-        //    {
-        //        ConfigDict[projectGuid].Remove(linkGuid);
-        //    }
-        //}
-
-        //static void RemoveProjectFromConfig(Guid projectGuid)
-        //{
-        //    if (ConfigDict.ContainsKey(projectGuid))
-        //    {
-        //        ConfigDict.Remove(projectGuid);
-        //    }
-        //}
         public void SerializeConfig(string confFile)
         {
 
             PrepareConfigFile();
 
-            if (DocumentsList.Count != 0)
+
+            XmlElement projectElement = ConfigurationDocument.DocumentElement;
+            projectElement.SetAttribute(IConfigurationStorage.DocNameField, Document.Name);
+            projectElement.SetAttribute(IConfigurationStorage.DocGuidField, Document.Guid.ToString());
+            projectElement.SetAttribute(IConfigurationStorage.DocStatusField, Document.Status ? "Enable" : "Disable");
+            if (Document.LinksInDocument.Count != 0)
             {
-                foreach (DocumentModelInWPF documentModelInWPF in DocumentsList)
+                foreach (LinkModelInWPF link in Document.LinksInDocument)
                 {
-                    XmlElement projectElement = ConfigurationDocument.CreateElement(ConfigConstants.ProjectNodeName);
-                    projectElement.SetAttribute(ConfigConstants.DocNameField, documentModelInWPF.Name);
-                    projectElement.SetAttribute(ConfigConstants.DocGuidField, documentModelInWPF.Guid.ToString());
-                    projectElement.SetAttribute(ConfigConstants.DocStatusField, documentModelInWPF.Status ? "Enable" : "Disable");
-                    if (documentModelInWPF.LinksInDocument.Count != 0)
+                    if (link.IsMonitoring)
                     {
-                        foreach (LinkModelInWPF link in documentModelInWPF.LinksInDocument)
-                        {
-                            if (link.IsMonitoring)
-                            {
-                                XmlElement linkElement = ConfigurationDocument.CreateElement(ConfigConstants.LinkNodeName);
-                                linkElement.SetAttribute(ConfigConstants.LinkNameField, link.Name);
-                                linkElement.SetAttribute(ConfigConstants.LinkGuidField, link.Guid.ToString());
-                                projectElement.AppendChild(linkElement);
-                            }
-                        }
+                        XmlElement linkElement = ConfigurationDocument.CreateElement(IConfigurationStorage.LinkNodeName);
+                        linkElement.SetAttribute(IConfigurationStorage.LinkNameField, link.Name);
+                        linkElement.SetAttribute(IConfigurationStorage.LinkGuidField, link.Guid.ToString());
+                        projectElement.AppendChild(linkElement);
                     }
-                    if (ConfigurationDocument?.DocumentElement?.AppendChild(projectElement) is null) throw new FileLoadException("Save exeption");
                 }
             }
             ConfigurationDocument.Save(confFile);
             return;
-
-
-
-
-
-        //    return Result.Succeeded;
-        //}
-
         }
-
-        void ClearCache()
-        {
-            DocumentsList.Clear();
-            ConfigurationDocument = null;
-        }
-
     }
 }

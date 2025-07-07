@@ -17,7 +17,7 @@ namespace LinkCleaner.Presentation.Models
         void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-        public string Name { get; init; }
+        public string Name { get; set; }
         public Guid Guid { get; init; }
 
         bool _status;
@@ -31,7 +31,7 @@ namespace LinkCleaner.Presentation.Models
             }
         }
 
-        List<LinkModelInWPF> _linksInDocument = new List<LinkModelInWPF>();
+        List<LinkModelInWPF> _linksInDocument;
         public List<LinkModelInWPF> LinksInDocument
         {
             get => _linksInDocument;
