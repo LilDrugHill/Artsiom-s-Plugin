@@ -9,7 +9,7 @@ using LinkCleaner.Storage.Constants;
 
 namespace LinkCleaner.Storage.Services
 {
-    public static partial class MonitoringConfig
+    public class MonitoringConfig
     {
         //public string Name => "Add Link";
         //public string IconName => "link_cleaner_icon.png";
@@ -25,86 +25,114 @@ namespace LinkCleaner.Storage.Services
         //        TaskDialog.Show("Info", "No links found in the document.");
         //        return Result.Failed;
         //    }
-        static XmlDocument ConfigurationDocument;
-        static bool _hasProjects = false;
-        static bool _hasLinks = false;
+        XmlDocument ConfigurationDocument;
+        
+        public string ConfigFilePath { get; init; }
+        public string ConfigDirPath { get; init; }
 
-        static public List<DocumentModelInWPF> DocumentsList = new List<DocumentModelInWPF>();
+        DocumentModelInWPF _document;
 
-        static MonitoringConfig()
+        public DocumentModelInWPF Document { get => _document; init => _document = value; }
+
+        public MonitoringConfig(Guid projectGuid, string? confDir = null)
         {
-            
+            ConfigDirPath = confDir ?? ConfigConstants.PathToConfigurationDirectory;
+            ConfigFilePath = Path.Combine(ConfigDirPath, $"{projectGuid.ToString()}.xml");
+
+            DeserializeConfig();
         }
+
+
 
         /// <summary>
         /// Создает конфигурационный файл если это требуется. Параметры нужны ТОЛЬКО для тестирования 
         /// </summary>
         /// <param name="confDir"></param>
         /// <param name="confFile"></param>
-        public static void PrepareConfigFile(string? confDir = null, string? confFile = null)
+        public void PrepareConfigFile()
         {
-            string configurationDirectory = confDir ?? ConfigConstants.PathToConfigurationDirectory;
-            string pathToConfigurationFile = confFile ?? ConfigConstants.PathToConfigurationFile;
-
             try
             {
-                switch (Directory.Exists(configurationDirectory), File.Exists(pathToConfigurationFile))
+                switch (Directory.Exists(ConfigDirPath), File.Exists(ConfigFilePath))
                 {
-                    case ( false, false):
-                        Directory.CreateDirectory(configurationDirectory);
-                        CreateConfFile(pathToConfigurationFile);
+                    case (false, false):
+                        Directory.CreateDirectory(ConfigDirPath);
+                        CreateConfFile(ConfigFilePath);
+                        InitConfDoc(ConfigFilePath);
                         break;
-                    case ( true, false):
-                        CreateConfFile(pathToConfigurationFile);
+                    case (true, false):
+                        CreateConfFile(ConfigFilePath);
+                        InitConfDoc(ConfigFilePath);
                         break;
-                    case ( true, true):
-                        if (!TryGetValidXmlConfig(pathToConfigurationFile, out XmlDocument? xmlDoc))
+                    case (true, true):
+                        if (!TryGetValidXmlConfig(ConfigFilePath, out XmlDocument? xmlDoc))
                         {
-                            File.Delete(pathToConfigurationFile);
-                            CreateConfFile(pathToConfigurationFile);
+                            File.Delete(ConfigFilePath);
+                            CreateConfFile(ConfigFilePath);
+                            InitConfDoc(ConfigFilePath);
+                        } else
+                        {
+                            InitConfDoc(xmlDoc);
                         }
-                        ConfigurationDocument = xmlDoc;
                         break;
+
                 }
             }
             catch (Exception ex)
             {
                 //TaskDialog.Show("Error", $"Failed to create config file: {ex.Message}.");
             }
-
-
         }
-        static void CreateConfFile(string path)
+
+        void InitConfDoc(string confFile) 
+        {
+                var doc = new XmlDocument();
+                doc.LoadXml(confFile);
+                ConfigurationDocument = doc;
+        }
+        void InitConfDoc(XmlDocument xmlDoc)
+        {
+            ConfigurationDocument = xmlDoc;
+        }
+
+        void CreateConfFile(string path)
         {
             var doc = new XDocument(new XDeclaration("1.0", "utf-8", "yes"), new XElement("Data"));
             doc.Save(path);
         }
 
-        //
+
+
+        // TODO: Refactor - malek po-debilnomy sdelano
         /// <summary>
         /// If it returns true. out set loaded XML configuration. If false out is null.
         /// </summary>
         /// <param name="confFile"></param>
         /// <param name="xmlDoc"></param>
         /// <returns></returns>
-        public static bool TryGetValidXmlConfig(string confFile, out XmlDocument? xmlDoc) 
+        public bool TryGetValidXmlConfig(string confFile, out XmlDocument? xmlDoc) 
         {
 
             if (File.Exists(confFile))
             {
+                if (!ValidateMetaInfo(confFile))
+                {
+                    xmlDoc = null;
+                    return false; // Wrong MetaData in XML file
+                }
                 xmlDoc = new();
 
                 try
                 {
                     xmlDoc.Load(confFile);
-                    XmlNode root = ConfigurationDocument.DocumentElement;
+                    XmlNode root = xmlDoc.DocumentElement;
                     if (root is XmlElement xmlRoot && xmlRoot.Name == ConfigConstants.RootName)
                     {
                         if (xmlRoot.HasChildNodes)
                         {
                             foreach (XmlNode projectNode in xmlRoot.ChildNodes)
                             {
-                                if(projectNode.Name == ConfigConstants.ProjectNodeName 
+                                if (projectNode.Name == ConfigConstants.ProjectNodeName
                                     && projectNode.Attributes.GetNamedItem(ConfigConstants.DocNameField)?.Value is not null
                                     && projectNode.Attributes.GetNamedItem(ConfigConstants.DocGuidField)?.Value is not null
                                     && projectNode.Attributes.GetNamedItem(ConfigConstants.DocStatusField)?.Value is not null)
@@ -114,24 +142,22 @@ namespace LinkCleaner.Storage.Services
                                         foreach (XmlNode linkNode in projectNode.ChildNodes)
                                         {
                                             if (linkNode.Name == ConfigConstants.LinkNodeName
-                                                && linkNode.Attributes.GetNamedItem(ConfigConstants.LinkNodeName)?.Value is not null
-                                                && linkNode.Attributes.GetNamedItem(ConfigConstants.LinkGuidField)?.Value is not null
-                                                && linkNode.Attributes.GetNamedItem(ConfigConstants.LinkIsMonitoringField)?.Value is not null) 
-                                            { }
+                                                && linkNode.Attributes.GetNamedItem(ConfigConstants.LinkNameField)?.Value is not null
+                                                && linkNode.Attributes.GetNamedItem(ConfigConstants.LinkGuidField)?.Value is not null)
+                                            {
+                                                return true;
+                                            }
                                             xmlDoc = null;
                                             return false;
                                         }
-                                        _hasLinks
-                                        return true
+                                        return true;
                                     }
                                     return true;
-
                                 }
                                 xmlDoc = null;
                                 return false;
                             }
-                            _hasProjects = true;
-                            return true
+                            return true;
                         }
                         return true; // Valid configuration file
                     }
@@ -145,38 +171,59 @@ namespace LinkCleaner.Storage.Services
             }
             xmlDoc = null;
             return false; // Invalid configuration file
+
+            bool ValidateMetaInfo(string confFilePath)
+            {
+                string? firstLine;
+                using (var reader = new StreamReader(confFilePath))
+                {
+                    firstLine = reader.ReadLine();
+                }
+
+                if (firstLine is not null && firstLine.StartsWith("<?xml"))
+                {
+                    // Парсим вручную
+                    var match = System.Text.RegularExpressions.Regex.Match(firstLine,
+                        @"<\?xml\s+version\s*=\s*""(?<version>[^""]+)""\s*encoding\s*=\s*""(?<encoding>[^""]+)""\s*(standalone\s*=\s*""(?<standalone>[^""]+)"")?\s*\?>");
+
+                    if (match.Success)
+                    {
+                        string version = match.Groups["version"].Value;
+                        string encoding = match.Groups["encoding"].Value;
+                        string standalone = match.Groups["standalone"].Value;
+
+                        if (version == "1.0" && encoding == "utf-8" && standalone == "yes") return true;
+                    }
+                }
+                return false; // Если не удалось прочитать или разобрать первую строку
+            }
         }
 
-        static void LoadConfig()
+        public List<DocumentModelInWPF> DeserializeConfig()
         {
-            if (ConfigurationDocument is null) throw new FileLoadException("Conf doesn't exists");
-
-            if (ConfigurationDocument.DocumentElement is XmlElement XmlRoot && XmlRoot.Name == ConfigConstants.RootName)
+            PrepareConfigFile();
+            if (ConfigurationDocument.DocumentElement.HasChildNodes && ConfigurationDocument.DocumentElement.ChildNodes is XmlNodeList Nodes)
             {
-                if (XmlRoot.HasChildNodes)
+                foreach (XmlNode project in Nodes)
                 {
-                    foreach (XmlNode project in XmlRoot.ChildNodes)
+                    string projectName = project.Attributes.GetNamedItem(ConfigConstants.DocNameField).Value;
+                    Guid projectGuid = new Guid(project.Attributes.GetNamedItem(ConfigConstants.DocGuidField).Value);
+                    bool status = project.Attributes.GetNamedItem(ConfigConstants.DocStatusField).Value == "Enable";
+                    List<LinkModelInWPF> links = new();
+                    if (project.HasChildNodes)
                     {
-                        string projectName = project.Attributes.GetNamedItem(ConfigConstants.DocNameField).Value;
-                        Guid projectGuid = new Guid(project.Attributes.GetNamedItem(ConfigConstants.DocGuidField).Value);
-                        Enum.TryParse(project.Attributes.GetNamedItem(ConfigConstants.DocStatusField).Value, out Status status);
-                        if (project.HasChildNodes)
+                        foreach (XmlNode linksInConfig in project.ChildNodes)
                         {
-                            LinkModelInWPF[] links = new LinkModelInWPF[project.ChildNodes.Count];
-                            int i = 0;
-                            foreach (XmlNode linksInConfig in project.ChildNodes)
-                            {
-                                links[i] = new LinkModelInWPF(linksInConfig.Attributes.GetNamedItem(ConfigConstants.LinkNameField).Value, 
-                                                              new Guid(linksInConfig.Attributes.GetNamedItem(ConfigConstants.Lin).Value), 
-                                                              true);
-                                i++;
-                            }
+                            links.Add(new LinkModelInWPF(linksInConfig.Attributes.GetNamedItem(ConfigConstants.LinkNameField).Value,
+                                                            new Guid(linksInConfig.Attributes.GetNamedItem(ConfigConstants.LinkGuidField).Value),
+                                                            true));
                         }
                     }
-
+                    Document = new DocumentModelInWPF(projectName, projectGuid, status) { LinksInDocument = links };
                 }
             }
-            ConfigurationDocument = null;
+            return DocumentsList;
+
         }
 
         //static bool IsProjectInConfig(Guid projectGuid)
@@ -216,32 +263,36 @@ namespace LinkCleaner.Storage.Services
         //        ConfigDict.Remove(projectGuid);
         //    }
         //}
-        static void SaveConfig()
+        public void SerializeConfig(string confFile)
         {
+
             PrepareConfigFile();
+
             if (DocumentsList.Count != 0)
             {
                 foreach (DocumentModelInWPF documentModelInWPF in DocumentsList)
                 {
                     XmlElement projectElement = ConfigurationDocument.CreateElement(ConfigConstants.ProjectNodeName);
-                    projectElement.SetAttribute(ConfigConstants.DocNameField, documentModelInWPF.Name);S
+                    projectElement.SetAttribute(ConfigConstants.DocNameField, documentModelInWPF.Name);
                     projectElement.SetAttribute(ConfigConstants.DocGuidField, documentModelInWPF.Guid.ToString());
-                    projectElement.SetAttribute(ConfigConstants.DocStatusField, documentModelInWPF.Status.ToString());
-                    if (documentModelInWPF?.LinksInDocument?.Length != 0)
+                    projectElement.SetAttribute(ConfigConstants.DocStatusField, documentModelInWPF.Status ? "Enable" : "Disable");
+                    if (documentModelInWPF.LinksInDocument.Count != 0)
                     {
                         foreach (LinkModelInWPF link in documentModelInWPF.LinksInDocument)
                         {
-                            XmlElement linkElement = ConfigurationDocument.CreateElement(ConfigConstants.LinkNodeName);
-                            linkElement.SetAttribute(ConfigConstants.LinkNameField, link.Name);
-                            linkElement.SetAttribute(ConfigConstants.LinkGuidField, link.Guid.ToString());
-                            linkElement.SetAttribute(ConfigConstants.LinkIsMonitoringField, link.IsMonitoring ? "1" : "0");
-                            projectElement.AppendChild(linkElement);
+                            if (link.IsMonitoring)
+                            {
+                                XmlElement linkElement = ConfigurationDocument.CreateElement(ConfigConstants.LinkNodeName);
+                                linkElement.SetAttribute(ConfigConstants.LinkNameField, link.Name);
+                                linkElement.SetAttribute(ConfigConstants.LinkGuidField, link.Guid.ToString());
+                                projectElement.AppendChild(linkElement);
+                            }
                         }
                     }
                     if (ConfigurationDocument?.DocumentElement?.AppendChild(projectElement) is null) throw new FileLoadException("Save exeption");
                 }
             }
-            ConfigurationDocument.Save(ConfigConstants.PathToConfigurationFile);
+            ConfigurationDocument.Save(confFile);
             return;
 
 
@@ -251,6 +302,12 @@ namespace LinkCleaner.Storage.Services
         //    return Result.Succeeded;
         //}
 
+        }
+
+        void ClearCache()
+        {
+            DocumentsList.Clear();
+            ConfigurationDocument = null;
         }
 
     }
