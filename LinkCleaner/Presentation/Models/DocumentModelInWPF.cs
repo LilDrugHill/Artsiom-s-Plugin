@@ -20,8 +20,8 @@ namespace LinkCleaner.Presentation.Models
         public string Name { get; init; }
         public Guid Guid { get; init; }
 
-        Status _status;
-        public Status Status
+        bool _status;
+        public bool Status
         {
             get => _status;
             set
@@ -31,18 +31,17 @@ namespace LinkCleaner.Presentation.Models
             }
         }
 
-        LinkModelInWPF[]? _linksInDocument;
-        public LinkModelInWPF[]? LinksInDocument
+        List<LinkModelInWPF> _linksInDocument = new List<LinkModelInWPF>();
+        public List<LinkModelInWPF> LinksInDocument
         {
             get => _linksInDocument;
-            set
+            init
             {
-                if (_linksInDocument is null) _linksInDocument = value;
-                   
+                _linksInDocument = value;
             }
         }
 
-        public DocumentModelInWPF(string name, Guid guid, Status status)
+        public DocumentModelInWPF(string name, Guid guid, bool status)
         {
             Name = name;
             Guid = guid;
