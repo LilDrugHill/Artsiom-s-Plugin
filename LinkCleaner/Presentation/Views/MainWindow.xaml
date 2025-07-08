@@ -7,7 +7,10 @@
         xmlns:pvm="clr-namespace:LinkCleaner.Presentation.ViewModels"
         xmlns:prc="clr-namespace:LinkCleaner.Presentation.Converters"
         mc:Ignorable="d"
-        Title="LinkCleaner" Height="500" Width="270" WindowStyle="ToolWindow" ResizeMode="NoResize" SizeToContent="Manual">
+        Title="{Binding Document.Name }" Height="500" Width="270" WindowStyle="ToolWindow" ResizeMode="NoResize" SizeToContent="Manual">
+    <Window.DataContext>
+        <pvm:MainViewModel/>
+    </Window.DataContext>
     <Window.Resources>
         <prc:BoolToColorConverter x:Key="BoolToColorConverter" TrueBrush="Aqua" FalseBrush="Crimson"/>
     </Window.Resources>
@@ -24,7 +27,7 @@
                   Width="250"
                   VerticalScrollBarVisibility="Auto"
                   VerticalAlignment="Center" Height="440" Margin="20,0,0,0">
-            <ItemsControl ItemsSource="{Binding Links}" Width="220">
+            <ItemsControl ItemsSource="{Binding Document.LinksInDocument}" Width="220">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal" Margin="5">

@@ -12,6 +12,8 @@ using Autodesk.Revit.UI;
 using LinkCleaner.Presentation.ViewModels;
 using LinkCleaner.Presentation.Views;
 using LinkCleaner.RevitApp.Interfaces;
+using LinkCleaner.Storage.Services;
+using LinkCleaner.Presentation.Models;
 
 namespace LinkCleaner.RevitApp.Services
 {
@@ -29,6 +31,30 @@ namespace LinkCleaner.RevitApp.Services
             UIDocument uiDoc = commandData.Application.ActiveUIDocument; // Получение активного документа
             Document doc = uiDoc.Document; // Получение документа
 
+            MonitoringConfig mc = new MonitoringConfig(doc.CreationGUID);
+            DocumentModelInWPF docWPF = mc.Document;
+            string[] guids = docWPF.LinksInDocument.Select(x => x.Guid.ToString()).ToArray();
+
+            if (docWPF.Name is null ) docWPF.Name = doc.Title; // Установка имени документа, если оно не задано 
+
+            if (TryGetLinks(doc, out RevitLinkType[]? linds))
+            {
+                // Массив гуидов 
+                foreach (var lind in linds)
+                {
+                    // Сравнивать гуиды и давать мониторинг ссылке или нет
+                    bool monStatus = false;
+                    if (guids.Contains(lind.VersionGuid.ToString()))
+                    {
+                        monStatus = true;
+                        // обновить имя если оно не совпадает а гуид совпадает
+                    }
+
+                    docWPF.LinksInDocument.Add(new LinkModelInWPF(lind.Name, lind.VersionGuid, monStatus));
+
+                }
+            }
+
 
             if (_mainWindow == null || !_mainWindow.IsVisible)
             {
@@ -43,5 +69,17 @@ namespace LinkCleaner.RevitApp.Services
             return Result.Succeeded;
 
         }
+        public static bool TryGetLinks(Document doc, out RevitLinkType[] LinksInDocument)
+        {
+            LinksInDocument = new FilteredElementCollector(doc)
+                .OfClass(typeof(RevitLinkType))
+                .AsValueEnumerable()
+                .Cast<RevitLinkType>()
+                .Where(link => !link.IsNestedLink)
+                .ToArray();
+            return LinksInDocument.Length > 0 ? true : false;
+        }
     }
+
+
 }

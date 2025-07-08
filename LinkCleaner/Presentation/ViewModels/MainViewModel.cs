@@ -12,65 +12,27 @@ using Autodesk.Revit.DB;
 using LinkCleaner.Presentation.Models;
 using LinkCleaner.Presentation.Commands;
 using LinkCleaner.RevitApp.Services;
+using LinkCleaner.Storage.Services;
 
 namespace LinkCleaner.Presentation.ViewModels
 {
     public class MainViewModel : INotifyPropertyChanged
     {
         Dictionary<Guid, List<Guid>> configDict1 = new Dictionary<Guid, List<Guid>>();
-        List<LinkModelInWPF> _links;
+        DocumentModelInWPF _document;
         public event PropertyChangedEventHandler? PropertyChanged;
-        public List<LinkModelInWPF> Links
+        public DocumentModelInWPF Document
         {
-            get { return _links; }
-            set
-            {
-                _links = value;
-                OnPropertyChanged(nameof(Links));
-            }
+            get { return _document; }
+            set { _document = value; }
         }
         public MainViewModel()
         {
-            //if (App.TryGetLinks(doc, out RevitLinkType[] linksInDocument))
-            //{
-            // Из CreationGuid
-            //}
-            ;
-            List<LinkModelInWPF> RevitDocumentGuids = new List<LinkModelInWPF>()
-            {
-                new LinkModelInWPF("Link1", Guid.NewGuid(), true),
-                new LinkModelInWPF("Link2", Guid.NewGuid(), false),
-                new LinkModelInWPF("Link3", Guid.NewGuid(), true),
-                new LinkModelInWPF("Link3", Guid.NewGuid(), true),
-                new LinkModelInWPF("Link3", Guid.NewGuid(), true),
-                new LinkModelInWPF("Link3", Guid.NewGuid(), true),
-                new LinkModelInWPF("Link3", Guid.NewGuid(), true),
-                new LinkModelInWPF("Link3", Guid.NewGuid(), true),
-                new LinkModelInWPF("Link3", Guid.NewGuid(), true),
-                new LinkModelInWPF("Link3", Guid.NewGuid(), true),
-                new LinkModelInWPF("Link3", Guid.NewGuid(), true),
-                new LinkModelInWPF("Link3", Guid.NewGuid(), true),
-                new LinkModelInWPF("Link3", Guid.NewGuid(), true),
-                new LinkModelInWPF("Link3", Guid.NewGuid(), true),
-                new LinkModelInWPF("Link3", Guid.NewGuid(), true),
-                new LinkModelInWPF("Link3", Guid.NewGuid(), true),
-                new LinkModelInWPF("Link3", Guid.NewGuid(), true),
-                new LinkModelInWPF("Link3", Guid.NewGuid(), true),
-                new LinkModelInWPF("Link3", Guid.NewGuid(), true),
-                new LinkModelInWPF("Link3", Guid.NewGuid(), true),
-                new LinkModelInWPF("Link3", Guid.NewGuid(), true),
-                new LinkModelInWPF("Link3", Guid.NewGuid(), true),
-                new LinkModelInWPF("Link3", Guid.NewGuid(), true),
-                new LinkModelInWPF("Link3", Guid.NewGuid(), true),
-                new LinkModelInWPF("Link3", Guid.NewGuid(), true),
-                new LinkModelInWPF("Link3", Guid.NewGuid(), true),
-                new LinkModelInWPF("Link3", Guid.NewGuid(), true),
-                new LinkModelInWPF("Link3", Guid.NewGuid(), true),
-                new LinkModelInWPF("Link3", Guid.NewGuid(), true),
-                new LinkModelInWPF("Link3", Guid.NewGuid(), true)
 
-            };
-            Links = RevitDocumentGuids;
+            Document = new DocumentModelInWPF("testDoc", new Guid("a87274e2-4956-4344-8b98-e23b5f0733d5"), true) { LinksInDocument = new List<LinkModelInWPF>() };
+            Document.LinksInDocument.Add(new LinkModelInWPF("testLink1", new Guid("a87274e2-4956-4344-8b98-e23b5f0733d5"), true));
+            Document.LinksInDocument.Add(new LinkModelInWPF("testLink2", new Guid("a87274e2-4956-4344-8b98-e23b5f0733d5"), false));
+
             CloseCommand = new RelayCommand(() => RequestClose?.Invoke(this, EventArgs.Empty));
             ApplyChangesToConfigCom = new RelayCommand(() => ApplyChangesToConfigEv?.Invoke(this, EventArgs.Empty));
 

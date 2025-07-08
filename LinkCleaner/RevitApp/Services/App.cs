@@ -104,15 +104,6 @@ namespace LinkCleaner.RevitApp.Services
             };
         }
 
-        public static bool TryGetLinks(Document doc, out RevitLinkType[] LinksInDocument)
-        {
-            LinksInDocument = new FilteredElementCollector(doc)
-                .OfClass(typeof(RevitLinkType))
-                .AsValueEnumerable()
-                .Cast<RevitLinkType>()
-                .Where(link => !link.IsNestedLink)
-                .ToArray();
-            return LinksInDocument.Length > 0 ? true : false;
-        }
+
     }
 }
