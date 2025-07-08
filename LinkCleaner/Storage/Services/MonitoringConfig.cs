@@ -73,7 +73,7 @@ namespace LinkCleaner.Storage.Services
         void InitConfDoc(string confFile) 
         {
                 var doc = new XmlDocument();
-                doc.LoadXml(confFile);
+                doc.Load(confFile);
                 ConfigurationDocument = doc;
         }
         void InitConfDoc(XmlDocument xmlDoc)
@@ -112,24 +112,32 @@ namespace LinkCleaner.Storage.Services
                 {
                     xmlDoc.Load(confFile);
                     XmlNode root = xmlDoc.DocumentElement;
-                    if (root is XmlElement xmlRoot && xmlRoot.Name == IConfigurationStorage.RootName
-                        && xmlRoot.Attributes.GetNamedItem(IConfigurationStorage.DocNameField)?.Value is not null
-                        && xmlRoot.Attributes.GetNamedItem(IConfigurationStorage.DocGuidField)?.Value is not null
-                        && xmlRoot.Attributes.GetNamedItem(IConfigurationStorage.DocStatusField)?.Value is not null)
+                    if (root is XmlElement xmlRoot && xmlRoot.Name == IConfigurationStorage.RootName)
                     {
-                        if (xmlRoot.HasChildNodes)
+                        if (xmlRoot.Attributes.Count > 0)
                         {
-                            foreach (XmlNode linkNode in xmlRoot.ChildNodes)
+                            if (xmlRoot.Attributes.GetNamedItem(IConfigurationStorage.DocNameField)?.Value is not null
+                            && xmlRoot.Attributes.GetNamedItem(IConfigurationStorage.DocGuidField)?.Value is not null
+                            && xmlRoot.Attributes.GetNamedItem(IConfigurationStorage.DocStatusField)?.Value is not null)
                             {
-                                if (linkNode.Name == IConfigurationStorage.LinkNodeName
-                                    && linkNode.Attributes.GetNamedItem(IConfigurationStorage.LinkNameField)?.Value is not null
-                                    && linkNode.Attributes.GetNamedItem(IConfigurationStorage.LinkGuidField)?.Value is not null)
+                                if (xmlRoot.HasChildNodes)
                                 {
-                                    return true;
+                                    foreach (XmlNode linkNode in xmlRoot.ChildNodes)
+                                    {
+                                        if (linkNode.Name == IConfigurationStorage.LinkNodeName
+                                            && linkNode.Attributes.GetNamedItem(IConfigurationStorage.LinkNameField)?.Value is not null
+                                            && linkNode.Attributes.GetNamedItem(IConfigurationStorage.LinkGuidField)?.Value is not null)
+                                        {
+                                            return true;
+                                        }
+                                        xmlDoc = null;
+                                        return false;
+                                    }
                                 }
-                                xmlDoc = null;
-                                return false;
+                                return true;
                             }
+                            xmlDoc = null;
+                            return false;
                         }
                         return true;
                     }
@@ -179,7 +187,7 @@ namespace LinkCleaner.Storage.Services
 
 
             PrepareConfigFile();
-            if (ConfigurationDocument.DocumentElement is XmlNode confProjRoot && confProjRoot?.Attributes is not null)
+            if (ConfigurationDocument.DocumentElement is XmlNode confProjRoot && confProjRoot.Attributes?.Count > 0)
             {
                 if (confProjRoot.Attributes.GetNamedItem(IConfigurationStorage.DocGuidField) is not XmlNode attr || attr.Value != projectGuid.ToString()) throw new Exception("***");
                 // Нужно динамически проверять имя перед отображением
@@ -222,6 +230,11 @@ namespace LinkCleaner.Storage.Services
             }
             ConfigurationDocument.Save(ConfigFilePath);
             return;
+        }
+
+        public void Clear()
+        {
+
         }
     }
 }

@@ -1,9 +1,9 @@
-﻿using System.Reflection;
-using System.Xml;
-using System.Xml.Serialization;
-
+﻿using LinkCleaner.Presentation.Models;
 using LinkCleaner.Storage.Services;
-using LinkCleaner.Presentation.Models;
+using System.Reflection;
+using System.Text;
+using System.Xml;
+using System.Xml.Linq;
 
 
 namespace LinkCleaner.Tests
@@ -11,96 +11,106 @@ namespace LinkCleaner.Tests
     [TestClass]
     public sealed class TestMonitoringConfig
     {
-        //[TestInitialize]
-        //public void TestInitialize()
-        //{
-        //    string pathDir = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), @"..\..\..\..\TestDir"));
-        //    MonitoringConfig mc = new(new Guid("59a75bfe-73d9-4e6b-a2a6-9475b3ddbcf4"), pathDir);
-        //}
+        static string PathDir = Path.GetFullPath(Path.Combine(Path.GetTempPath(),
+                                                              @"\TestDir"));
 
-        //[TestMethod]
-        //public void TestCreatingFile()
-        //{
-            
-        //    string pathFile = Path.Combine(pathDir, "MonitoringConfig.xml");
+        [ClassInitialize]
+        public static void Initialize(TestContext testContext)
+        {
 
-        //    // Ensure the directory exists
-        //    MonitoringConfig.PrepareConfigFile(confFile: pathFile);
-        //    Assert.IsTrue(File.Exists(pathFile));
-        //    //File.Delete(pathFile);
-        //}
+            try { Directory.CreateDirectory(PathDir); } catch { /* ignore */ };
+            var doc = new XDocument(
+                new XDeclaration("1.0", "utf-8", "yes"),
+                new XElement("Project",
+                    new XAttribute("Name", "TestProject"),
+                    new XAttribute("Guid", "59a75bfe-73d9-4e6b-a2a6-9475b3ddbcf4"),
+                    new XAttribute("Status", "Enable"),
+                    new XElement("Link",
+                        new XAttribute("Name", "TestLink1"),
+                        new XAttribute("Guid", "59a75bfe-73d9-4e6b-a2a6-9475b3ddbcf4")
+                    ),
+                    new XElement("Link",
+                        new XAttribute("Name", "TestLink2"),
+                        new XAttribute("Guid", "59a75bfe-73d9-4e6b-a2a6-9475b3ddbcf4")
+                    ),
+                    new XElement("Link",
+                        new XAttribute("Name", "TestLink3"),
+                        new XAttribute("Guid", "59a75bfe-73d9-4e6b-a2a6-9475b3ddbcf4")
+                    )
+                )
+            );
+            var settings = new XmlWriterSettings
+            {
+                Indent = true,
+                Encoding = new UTF8Encoding(false),
+                OmitXmlDeclaration = false // <-- Важно!
+               
+            };
 
-        //[TestMethod]
-        //public void TestCreatingDir()
-        //{
-        //    string pathDir = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), @"..\..\..\..\TestDir\DirDoesNotExists"));
-        //    string pathFile = Path.Combine(pathDir, "MonitoringConfig.xml");
+            using (var writer = XmlWriter.Create(Path.GetFullPath(Path.Combine(PathDir, "59a75bfe-73d9-4e6b-a2a6-9475b3ddbcf4.xml")), settings))
+            {
+                doc.Save(writer);
+            }
+        }
+        [ClassCleanup]
+        public static void CleanupAfterAllTests()
+        {
+            void TryDelete(string path)
+            {
+                if (File.Exists(path))
+                {
+                    try { File.Delete(path); } catch { /* ignore */ }
+                }
+            }
 
-        //    MonitoringConfig.PrepareConfigFile(confFile: pathFile);
-        //    Assert.IsTrue(Directory.Exists(pathDir), "Dir does not creates");
-        //    Assert.IsTrue(File.Exists(pathFile), "File does not creates");
-        //    Directory.Delete(pathDir, true); // Delete the directory after the test
-        //}
+            TryDelete(Path.Combine(PathDir, "59a75bfe-73d9-4e6b-a2a6-9475b3ddbcf4.xml"));
+            TryDelete(Path.Combine(PathDir, "a87274e2-4956-4344-8b98-e23b5f0733d5.xml"));
 
-        //[TestMethod]
-        //[DataRow("BadConfig1.xml")]
-        //[DataRow("BadConfig2.xml")]
-        //[DataRow("BadConfig3.xml")]
-        //[DataRow("BadConfig4.xml")]
-        //[DataRow("BadConfig5.xml")]
-        //public void TestConfigValidationBadConfig(string confFileName)
-        //{
-        //    string dirPath = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), @"..\..\..\..\TestDir\Templates"));
-        //    string filePath = Path.Combine(dirPath, confFileName);
-
-        //    Assert.IsFalse(MonitoringConfig.TryGetValidXmlConfig(filePath, out XmlDocument xmlDoc));
-        //    Assert.IsTrue(xmlDoc is null);
+            try { Directory.Delete(PathDir, true); } catch { }
+        }
 
 
-        //}
-
-        //[TestMethod]
-        //[DataRow("GoodConfig1.xml")]
-        //[DataRow("GoodConfig2.xml")]
-        //[DataRow("GoodConfig3.xml")]
-        //public void TestConfigValidationGoodConfig(string confFileName)
-        //{
-        //    string dirPath = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), @"..\..\..\..\TestDir\Templates"));
-        //    string filePath = Path.Combine(dirPath, confFileName);
-
-        //    Assert.IsTrue(MonitoringConfig.TryGetValidXmlConfig(filePath, out XmlDocument? xmlDoc));
-        //    Assert.IsTrue(xmlDoc is XmlDocument);
-        //}
 
         [TestMethod]
         public void TestConfigDeserialization()
         {
-            string pathDir = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), @"..\..\..\..\TestDir"));
-            MonitoringConfig mc = new(new Guid("59a75bfe-73d9-4e6b-a2a6-9475b3ddbcf4"), pathDir);
+            MonitoringConfig mc = new(new Guid("59a75bfe-73d9-4e6b-a2a6-9475b3ddbcf4"), PathDir);
 
             DocumentModelInWPF? doc = mc.Document;
             Assert.IsNotNull(doc);
             Assert.AreEqual(doc.LinksInDocument.Count, 3);
+            mc = null;
         }
 
-        //[TestMethod]
-        //public void TestConfigSerialization()
-        //{
-        //    string pathDir = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), @"..\..\..\..\TestDir"));
-        //    string pathFile1 = Path.Combine(pathDir, "MonitoringConfigNEW.xml");
-        //    string pathFile2 = Path.Combine(pathDir, "MonitoringConfig2.xml");
+        [TestMethod]
+        public void TestConfigSerialization()
+        {
 
-        //    List<DocumentModelInWPF> documents = MonitoringConfig.DeserializeConfig(pathFile2);
-        //    byte fCount = (byte)documents.Count;
-        //    documents.Add(new DocumentModelInWPF("Test5", new Guid("59a75bfe-73d9-4e6b-a2a6-9475b3ddbcf4"), true));
-        //    MonitoringConfig.SerializeConfig(pathFile1);
-        //    MonitoringConfig.ClearCache();
 
-        //    List<DocumentModelInWPF> documentsNew = MonitoringConfig.DeserializeConfig(pathFile1);
-        //    Assert.AreEqual(fCount, documentsNew.Count);
+            MonitoringConfig mc = new(new Guid("a87274e2-4956-4344-8b98-e23b5f0733d5"), PathDir);
 
-            
-        //    File.Delete(pathFile1); // Clean up after test
-        //}
+            DocumentModelInWPF? doc = mc.Document;
+            Assert.IsNull(doc.Name);
+            Assert.AreEqual(doc.LinksInDocument.Count, 0);
+            Assert.AreEqual(doc.Guid.ToString(), "a87274e2-4956-4344-8b98-e23b5f0733d5");
+
+            doc.Name = "TestName";
+            doc.Status = true;
+            doc.LinksInDocument.Add(new LinkModelInWPF("TestLink",
+                                                       new Guid("a87274e2-4956-4344-8b98-e23b5f0733d5"),
+                                                       true));
+            mc.SerializeConfig();
+
+            MonitoringConfig mc2 = new(new Guid("a87274e2-4956-4344-8b98-e23b5f0733d5"), PathDir);
+            Assert.IsNotNull(mc2.Document?.Name);
+            Assert.AreEqual(mc2.Document.LinksInDocument?.Count, 1);
+            Assert.AreEqual(mc2.Document.Guid.ToString(), "a87274e2-4956-4344-8b98-e23b5f0733d5");
+            Assert.AreEqual(mc2.Document.Status, true);
+            Assert.AreEqual(mc2.Document?.LinksInDocument?[0].Name, "TestLink");
+
+
+        }
+
+
     }
 }

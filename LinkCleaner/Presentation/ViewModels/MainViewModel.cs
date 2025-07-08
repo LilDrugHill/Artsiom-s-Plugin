@@ -33,7 +33,7 @@ namespace LinkCleaner.Presentation.ViewModels
         {
             //if (App.TryGetLinks(doc, out RevitLinkType[] linksInDocument))
             //{
-
+            // Из CreationGuid
             //}
             ;
             List<LinkModelInWPF> RevitDocumentGuids = new List<LinkModelInWPF>()
