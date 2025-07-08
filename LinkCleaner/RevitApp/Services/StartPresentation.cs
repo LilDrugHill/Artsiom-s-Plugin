@@ -33,19 +33,19 @@ namespace LinkCleaner.RevitApp.Services
 
             MonitoringConfig mc = new MonitoringConfig(doc.CreationGUID);
             DocumentModelInWPF docWPF = mc.Document;
-            string[] guids = docWPF.LinksInDocument.Select(x => x.Guid.ToString()).ToArray();
 
             if (docWPF.Name is null ) docWPF.Name = doc.Title; // Установка имени документа, если оно не задано 
 
-            if (TryGetLinks(doc, out RevitLinkType[]? linds))
+            if (TryGetLinks(doc, out RevitLinkType[]? linksInRevit))
             {
                 // Массив гуидов 
-                foreach (var lind in linds)
+                foreach (RevitLinkType linkIR in linksInRevit)
                 {
                     // Сравнивать гуиды и давать мониторинг ссылке или нет
                     bool monStatus = false;
-                    if (guids.Contains(lind.VersionGuid.ToString()))
+                    if (docWPF.LinksInDocument.Find(x => x.Guid.ToString() == l))
                     {
+                        docWPF.LinksInDocument.Find
                         monStatus = true;
                         // обновить имя если оно не совпадает а гуид совпадает
                     }
