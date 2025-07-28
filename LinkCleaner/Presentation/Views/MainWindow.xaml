@@ -7,12 +7,11 @@
         xmlns:pvm="clr-namespace:LinkCleaner.Presentation.ViewModels"
         xmlns:prc="clr-namespace:LinkCleaner.Presentation.Converters"
         mc:Ignorable="d"
-        Title="{Binding Document.Name }" Height="500" Width="270" WindowStyle="ToolWindow" ResizeMode="NoResize" SizeToContent="Manual">
-    <Window.DataContext>
-        <pvm:MainViewModel/>
-    </Window.DataContext>
+        Title="{Binding Document.Name }" Height="500" Width="270" WindowStyle="None" ResizeMode="NoResize" SizeToContent="Manual">
+
     <Window.Resources>
         <prc:BoolToColorConverter x:Key="BoolToColorConverter" TrueBrush="Aqua" FalseBrush="Crimson"/>
+        <prc:OnOffConverter x:Key="OnOffConverter"/>
     </Window.Resources>
     <Grid Margin="0,0,0,4">
         <Grid.RowDefinitions>
@@ -26,8 +25,8 @@
                   HorizontalAlignment="Left"
                   Width="250"
                   VerticalScrollBarVisibility="Auto"
-                  VerticalAlignment="Center" Height="440" Margin="20,0,0,0">
-            <ItemsControl ItemsSource="{Binding Document.LinksInDocument}" Width="220">
+                  VerticalAlignment="Center" Height="435" Margin="20,0,0,0">
+            <ItemsControl ItemsSource="{Binding Document.LinksInDocument}" Width="220" Height="425">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal" Margin="5">
@@ -42,12 +41,13 @@
         </ScrollViewer>
 
         <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10,10,10,10">
-            <Button Content="Off" 
-                Command="{Binding HelpCommand}" 
-                Width="25" Height="25" Margin="0,0,40,0"/>
+            <Button Content="{Binding Document.Status, Converter={StaticResource OnOffConverter}}" 
+                Command="{Binding ToggleStatus}" 
+                Width="33" Height="25" Margin="0,0,20,0"/>
             <Button Content="Apply" 
                 Width="80" Height="25" Margin="0,0,20,0"
-                IsDefault="True"/>
+                IsDefault="True"
+                Command="{Binding ApplyCommand}"/>
             <Button Content="Cancel" 
                 Command="{Binding CloseCommand}" 
                 IsCancel="True" 

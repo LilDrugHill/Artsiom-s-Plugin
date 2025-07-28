@@ -1,6 +1,9 @@
 ﻿using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Events;
 using Autodesk.Revit.UI;
+using LinkCleaner.RevitApp.Interfaces;
+using LinkCleaner.RevitApp.Utils;
+using LinkCleaner.Storage.Services;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -8,10 +11,10 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Controls;
 using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
 using ZLinq;
-
-using LinkCleaner.RevitApp.Interfaces;
 
 namespace LinkCleaner.RevitApp.Services
 {
@@ -42,9 +45,8 @@ namespace LinkCleaner.RevitApp.Services
 
             ribbonPanel.AddItem(CreateButton<StartPresentation>(assemblyLocation));
 
-            //application.ControlledApplication.DocumentSynchronizingWithCentral += OnDocumentSycing;
-            //application.ControlledApplication.DocumentSynchronizedWithCentral += OnDocumentSyced;
-            //application.ControlledApplication.DocumentChanged 
+            application.ControlledApplication.DocumentSynchronizingWithCentral += OnDocumentSycing;
+
 
 
             return Result.Succeeded;
@@ -56,15 +58,43 @@ namespace LinkCleaner.RevitApp.Services
             return Result.Succeeded;
         }
 
-        //private void OnDocumentSycing(object sender, DocumentSynchronizingWithCentralEventArgs e)
-        //{
-        //    // This method is called when a document is closing.
-        //    // You can add your cleanup code here.
-        //    if (GlobalParameter != null)
-        //    {
-        //        LinksDeletor(e.Document, LinksCache.SetCache(e.Document, GetLinks(e.Document)));
-        //    }
-        //}
+        private void OnDocumentSycing(object sender, DocumentSynchronizingWithCentralEventArgs e)
+        {
+            // This method is called when a document is closing.
+            // You can add your cleanup code here.
+            MonitoringConfig mc = new MonitoringConfig(e.Document.CreationGUID);
+            if (!mc.Document.Status) return;
+            Getters.TryGetLinks(e.Document, out RevitLinkInstance[]? linksInRevit);
+            // Подготовим HashSet<Guid> для быстрого поиска
+            var monitoredGuids = mc.Document.LinksInDocument
+                .Select(link => link.Guid)
+                .ToHashSet();
+
+            // Фильтруем ссылки
+            var links = linksInRevit
+                .Where(linkRVT =>
+                {
+                    var linkedDoc = linkRVT.GetLinkDocument();
+                    return linkedDoc != null && monitoredGuids.Contains(linkedDoc.CreationGUID);
+                });
+
+            using (Transaction tx = new Transaction(e.Document, "Delete Links"))
+            {
+                tx.Start();
+
+                FailureHandlingOptions failOpts = tx.GetFailureHandlingOptions();
+                failOpts.SetFailuresPreprocessor(new WarningSuppressor());
+                tx.SetFailureHandlingOptions(failOpts);
+
+                foreach (RevitLinkInstance linkI in links)
+                {
+                    RevitLinkType linkT = e.Document.GetElement(linkI.GetTypeId()) as RevitLinkType;
+                    e.Document.Delete(linkT.Id); // Удаление всех связанных файлов
+                }
+
+                tx.Commit();
+            }
+        }
 
         //private void OnDocumentSyced(object sender, DocumentSynchronizedWithCentralEventArgs e)
         //{
@@ -73,7 +103,6 @@ namespace LinkCleaner.RevitApp.Services
         //        ReturnLinks(e.Document, rl);
         //    }
         //}
-        // На случай аснихронного кода
         //private void AddLinkToStorage(object sender, DocumentChangedEventArgs e)
         //{
         //    Document doc = e.GetDocument();
@@ -83,13 +112,12 @@ namespace LinkCleaner.RevitApp.Services
         //        var element = doc.GetElement(id);
         //        if (element is RevitLinkInstance linkInstance)
         //        {
-
         //        }
         //    }
         //}
 
         static string assemblyLocation = Assembly.GetExecutingAssembly().Location;
-        public static readonly string AppsDirectoryPath = Path.GetDirectoryName(assemblyLocation);
+        public static readonly string AppsDirectoryPath = System.IO.Path.GetDirectoryName(assemblyLocation);
         /// Часть необходимая для создания и обращения к хранилищу иконок конпок
 
         static PushButtonData CreateButton<T>(string assemblyLocation) where T : IExternalCommand, IButtonData, new()

@@ -1,4 +1,5 @@
 ﻿
+using LinkCleaner.Presentation.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -7,11 +8,10 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
-using LinkCleaner.Presentation.Emuns;
 
 namespace LinkCleaner.Presentation.Models
 {
-    public class DocumentModelInWPF : INotifyPropertyChanged
+    public class DocumentModelInWPF : INotifyPropertyChanged, IDocumentViewData
     {
         public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -32,8 +32,8 @@ namespace LinkCleaner.Presentation.Models
             }
         }
 
-        List<LinkModelInWPF>? _linksInDocument;
-        public List<LinkModelInWPF>? LinksInDocument
+        List<ILinkViewData>? _linksInDocument;
+        public List<ILinkViewData>? LinksInDocument
         {
             get => _linksInDocument;
             init

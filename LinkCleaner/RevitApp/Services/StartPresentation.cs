@@ -9,11 +9,11 @@ using System.Threading.Tasks;
 using ZLinq;
 using Autodesk.Revit.UI;
 
-using LinkCleaner.Presentation.ViewModels;
 using LinkCleaner.Presentation.Views;
 using LinkCleaner.RevitApp.Interfaces;
 using LinkCleaner.Storage.Services;
 using LinkCleaner.Presentation.Models;
+using LinkCleaner.Presentation.Interfaces;
 
 namespace LinkCleaner.RevitApp.Services
 {
@@ -21,6 +21,7 @@ namespace LinkCleaner.RevitApp.Services
     internal class StartPresentation : IExternalCommand, IButtonData
     {
         public string Name => "Link Cleaner";
+        public IDocumentViewData? Document { get; private set; }
         public string IconName => "link_cleaner_icon.png"; // Ensure this icon exists in the specified path
         private MainWindow? _mainWindow;
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
@@ -32,34 +33,33 @@ namespace LinkCleaner.RevitApp.Services
             Document doc = uiDoc.Document; // Получение документа
 
             MonitoringConfig mc = new MonitoringConfig(doc.CreationGUID);
-            DocumentModelInWPF docWPF = mc.Document;
+            IDocumentViewData docWPF = mc.Document;
+            Document = docWPF;
 
             if (docWPF.Name is null ) docWPF.Name = doc.Title; // Установка имени документа, если оно не задано 
 
-            if (TryGetLinks(doc, out RevitLinkType[]? linksInRevit))
+            if (Utils.Getters.TryGetLinks(doc, out RevitLinkInstance[]? linksInRevit))
             {
                 // Массив гуидов 
-                foreach (RevitLinkType linkIR in linksInRevit)
+                foreach (RevitLinkInstance linkRVT in linksInRevit)
                 {
                     // Сравнивать гуиды и давать мониторинг ссылке или нет
-                    bool monStatus = false;
-                    if (docWPF.LinksInDocument.Find(x => x.Guid.ToString() == l))
+                    if (docWPF.LinksInDocument.Find(linkWPF => linkWPF.Guid == linkRVT.GetLinkDocument().CreationGUID) is LinkModelInWPF linkWPF)
                     {
-                        docWPF.LinksInDocument.Find
-                        monStatus = true;
-                        // обновить имя если оно не совпадает а гуид совпадает
+                        
+                        // обновить имя если оно не совпадает
+                        linkWPF.Name = linkRVT.Name.Split(':')[0];
+                    } else
+                    {
+                       docWPF.LinksInDocument.Add(new LinkModelInWPF(linkRVT.Name.Split(':')[0], linkRVT.GetLinkDocument().CreationGUID, false));
                     }
-
-                    docWPF.LinksInDocument.Add(new LinkModelInWPF(lind.Name, lind.VersionGuid, monStatus));
-
                 }
             }
 
-
-            if (_mainWindow == null || !_mainWindow.IsVisible)
+            if (_mainWindow == null || !_mainWindow.IsLoaded)
             {
-                _mainWindow = new MainWindow(doc);
-                _mainWindow.Show(); // Показывает окно
+                _mainWindow = new MainWindow(mc);
+                _mainWindow.ShowDialog(); // Показывает окно
             }
             else
             {
@@ -69,16 +69,9 @@ namespace LinkCleaner.RevitApp.Services
             return Result.Succeeded;
 
         }
-        public static bool TryGetLinks(Document doc, out RevitLinkType[] LinksInDocument)
-        {
-            LinksInDocument = new FilteredElementCollector(doc)
-                .OfClass(typeof(RevitLinkType))
-                .AsValueEnumerable()
-                .Cast<RevitLinkType>()
-                .Where(link => !link.IsNestedLink)
-                .ToArray();
-            return LinksInDocument.Length > 0 ? true : false;
-        }
+
+
+
     }
 
 

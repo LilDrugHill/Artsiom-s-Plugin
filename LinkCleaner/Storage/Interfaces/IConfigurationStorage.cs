@@ -1,10 +1,11 @@
-﻿using System.IO;
+﻿using LinkCleaner.Presentation.Interfaces;
 using LinkCleaner.Presentation.Models;
+using System.IO;
 
 
 namespace LinkCleaner.Storage.Interfaces
 {
-    interface IConfigurationStorage
+    public interface IConfigurationStorage
     {
         public static readonly string PathToConfigurationDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LinkCleaner");
 
@@ -18,8 +19,10 @@ namespace LinkCleaner.Storage.Interfaces
         public const string RootName = "Project";
         public const string LinkNodeName = "Link";
 
-        DocumentModelInWPF? Document {  get; }
-        
+        IDocumentViewData? Document {  get; }
 
+        public void SerializeConfig();
+        public void DeserializeConfig(Guid projectGuid);
+        
     }
 }

@@ -1,8 +1,5 @@
 {
   "profiles": {
-    "LinkCleaner": {
-      "commandName": "Project"
-    },
     "RevitStart": {
       "commandName": "Executable",
       "executablePath": "C:\\Program Files\\Autodesk\\Revit 2025\\Revit.exe",

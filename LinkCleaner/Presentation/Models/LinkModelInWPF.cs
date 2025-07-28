@@ -8,10 +8,11 @@ using System.Windows.Controls;
 using System.Windows.Input;
 
 using LinkCleaner.Presentation.Commands;
+using LinkCleaner.Presentation.Interfaces;
 
 namespace LinkCleaner.Presentation.Models
 {
-    public class LinkModelInWPF : INotifyPropertyChanged
+    public class LinkModelInWPF : INotifyPropertyChanged, ILinkViewData
     {
         public event PropertyChangedEventHandler? PropertyChanged;
         string _name;
@@ -38,7 +39,7 @@ namespace LinkCleaner.Presentation.Models
         public string Name
         {
             get { return _name; }
-            init { _name = value; }
+            set { _name = value; }
         }
 
         public Guid Guid
@@ -55,14 +56,7 @@ namespace LinkCleaner.Presentation.Models
             IsMonitoring = isMonitoring;
             ClickCommand = new RelayCommand(() => ToggleMonitoring(this, null)); // Привязка команды клика к методу
         }
-        public static LinkModelInWPF[] GetLinks(Guid revitDocumentGuid)
-        {
-            // TODO: Implement logic to retrieve links from the application context or configuration.
-            return new LinkModelInWPF[]
-            {
-                
-            };
-        }
+
         private void ToggleMonitoring(object sender, MouseButtonEventArgs? e)
         { 
             ((LinkModelInWPF)sender).IsMonitoring = !((LinkModelInWPF)sender).IsMonitoring; // Переключение состояния отслеживания при клике

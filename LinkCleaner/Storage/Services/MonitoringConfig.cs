@@ -2,10 +2,9 @@
 using System.IO;
 using System.Xml;
 using System.Xml.Linq;
-using LinkCleaner.Presentation.Emuns;
+using LinkCleaner.Presentation.Interfaces;
 using LinkCleaner.Presentation.Models;
 using LinkCleaner.Storage.Interfaces;
-
 
 namespace LinkCleaner.Storage.Services
 {
@@ -16,9 +15,9 @@ namespace LinkCleaner.Storage.Services
         public string ConfigFilePath { get; init; }
         public string ConfigDirPath { get; init; }
 
-        DocumentModelInWPF? _document;
+        IDocumentViewData? _document;
 
-        public DocumentModelInWPF? Document { get => _document; private set => _document = value; }
+        public IDocumentViewData? Document { get => _document; private set => _document = value; }
 
         public MonitoringConfig(Guid projectGuid, string? confDir = null)
         {
@@ -31,10 +30,8 @@ namespace LinkCleaner.Storage.Services
 
 
         /// <summary>
-        /// Создает конфигурационный файл если это требуется. Параметры нужны ТОЛЬКО для тестирования 
+        /// Создает конфигурационный файл если это требуется
         /// </summary>
-        /// <param name="confDir"></param>
-        /// <param name="confFile"></param>
         public void PrepareConfigFile()
         {
             try
@@ -146,7 +143,7 @@ namespace LinkCleaner.Storage.Services
                 }
                 catch (XmlException)
                 {
-                    //TaskDialog.Show("Error", "Configuration file is corrupted or invalid.");
+                    //Add logging
                 }
             }
             xmlDoc = null;
@@ -179,17 +176,18 @@ namespace LinkCleaner.Storage.Services
             }
         }
 
-        public DocumentModelInWPF? DeserializeConfig(Guid projectGuid)
+        public void DeserializeConfig(Guid projectGuid)
         {
             string? projectName = null;
             bool status = false;
-            List<LinkModelInWPF>? linkList = new();
+            List<ILinkViewData>? linkList = new();
 
 
             PrepareConfigFile();
             if (ConfigurationDocument.DocumentElement is XmlNode confProjRoot && confProjRoot.Attributes?.Count > 0)
             {
-                if (confProjRoot.Attributes.GetNamedItem(IConfigurationStorage.DocGuidField) is not XmlNode attr || attr.Value != projectGuid.ToString()) throw new Exception("***");
+                if (confProjRoot.Attributes.GetNamedItem(IConfigurationStorage.DocGuidField) is not XmlNode attr 
+                    || attr.Value != projectGuid.ToString()) throw new Exception("***");
                 // Нужно динамически проверять имя перед отображением
                 projectName = confProjRoot.Attributes.GetNamedItem(IConfigurationStorage.DocNameField)?.Value;
                 status = confProjRoot.Attributes.GetNamedItem(IConfigurationStorage.DocStatusField)?.Value == "Enable";
@@ -205,11 +203,10 @@ namespace LinkCleaner.Storage.Services
                 }
             }
             Document = new DocumentModelInWPF(projectName, projectGuid, status) { LinksInDocument = linkList };
-            return Document;
         }
         public void SerializeConfig()
         {
-
+            if (File.Exists(ConfigFilePath)) File.WriteAllText(ConfigFilePath, "");
             PrepareConfigFile();
             XmlElement projectElement = ConfigurationDocument.DocumentElement;
             projectElement.SetAttribute(IConfigurationStorage.DocNameField, Document.Name);
@@ -230,11 +227,6 @@ namespace LinkCleaner.Storage.Services
             }
             ConfigurationDocument.Save(ConfigFilePath);
             return;
-        }
-
-        public void Clear()
-        {
-
         }
     }
 }
