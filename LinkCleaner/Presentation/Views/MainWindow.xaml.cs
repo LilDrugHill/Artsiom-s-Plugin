@@ -1,9 +1,6 @@
 ﻿using System.Windows;
 
-using Autodesk.Revit.DB;
-
 using LinkCleaner.Presentation.ViewModels;
-using LinkCleaner.Storage.Services;
 using LinkCleaner.Storage.Interfaces;
 
 namespace LinkCleaner.Presentation.Views

@@ -1,11 +1,4 @@
-﻿using LinkCleaner.Presentation.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace LinkCleaner.Presentation.Interfaces
+﻿namespace LinkCleaner.Presentation.Interfaces
 {
     public interface IDocumentViewData
     {

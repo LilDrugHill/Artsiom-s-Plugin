@@ -1,12 +1,7 @@
-﻿
-using LinkCleaner.Presentation.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
+﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
+
+using LinkCleaner.Presentation.Interfaces;
 
 
 namespace LinkCleaner.Presentation.Models
@@ -18,7 +13,19 @@ namespace LinkCleaner.Presentation.Models
         void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-        public string? Name { get; set; }
+        private string? _name;
+        public string Name 
+        {
+            get
+            {
+                if (_name is null)
+                {
+                    return "Unnamed Document";
+                }
+                return _name;
+            }
+            set => _name = value;
+        }
         public Guid Guid { get; init; }
 
         bool _status;
