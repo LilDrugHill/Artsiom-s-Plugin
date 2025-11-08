@@ -31,8 +31,5 @@ namespace LinkCleaner.Presentation.ViewModels
         public event EventHandler RequestClose;
         public event EventHandler OnApplyChangesToConfig;
         public event EventHandler OnToggleDocumentStatus;
-
-
-
     }
 }

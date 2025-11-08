@@ -1,7 +1,8 @@
-﻿using System.Collections.Generic;
-using System.IO;
+﻿using System.IO;
 using System.Xml;
 using System.Xml.Linq;
+using System.Collections.Generic;
+
 using LinkCleaner.Presentation.Interfaces;
 using LinkCleaner.Presentation.Models;
 using LinkCleaner.Storage.Interfaces;
@@ -26,8 +27,6 @@ namespace LinkCleaner.Storage.Services
 
             DeserializeConfig(projectGuid);
         }
-
-
 
         /// <summary>
         /// Создает конфигурационный файл если это требуется
@@ -83,8 +82,6 @@ namespace LinkCleaner.Storage.Services
             var doc = new XDocument(new XDeclaration("1.0", "utf-8", "yes"), new XElement(IConfigurationStorage.RootName));
             doc.Save(path);
         }
-
-
 
         // TODO: Refactor - malek po-debilnomy sdelano
         /// <summary>
